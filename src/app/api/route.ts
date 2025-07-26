@@ -53,8 +53,51 @@ export async function POST(request: Request) {
     status: proxyResponse.status,
     headers: {
       "Content-Type": proxyResponse.headers.get("Content-Type") || "text/plain",
-      "Access-Control-Allow-Origin": "*", // 🔥 CORS = open gates of hell
+      "Access-Control-Allow-Origin": "*",
     },
+  });
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const searchParams = url.searchParams;
+
+  const targetUrl = searchParams.get("url");
+  const providedKey = searchParams.get("key");
+
+  const apiKey = process.env.API_KEY;
+
+  if (!providedKey || providedKey !== apiKey) {
+    return new Response("Unauthorized: Invalid API key", {
+      status: 401,
+      headers: {
+        "Content-Type": "text/plain",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+
+  if (!targetUrl) {
+    return new Response("Missing 'url' parameter", {
+      status: 400,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+
+  // Forward the GET request to the targetUrl
+  const proxyResponse = await fetch(targetUrl, {
+    method: "GET",
+    // No body, headers could be forwarded if you want, but fuck it for now
+  });
+
+  const responseHeaders = new Headers(proxyResponse.headers);
+  responseHeaders.set("Access-Control-Allow-Origin", "*");
+
+  return new Response(proxyResponse.body, {
+    status: proxyResponse.status,
+    headers: responseHeaders,
   });
 }
 
